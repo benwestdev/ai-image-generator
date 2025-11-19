@@ -12,15 +12,16 @@ export default function GalleryPage() {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [view, setView] = useState('gallery');
 
   useEffect(() => {
     fetchImages();
-  }, []);
+  }, [view]);
 
   const fetchImages = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/images');
+      const response = await fetch(`/api/images${view === 'gallery' ? '?gallery=true' : ''}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -77,6 +78,28 @@ export default function GalleryPage() {
     }
   };
 
+  const handleAddToGallery = async (id) => {
+    try {
+      const response = await fetch('/api/images', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, is_gallery: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add to gallery');
+      }
+
+      setImages((prev) =>
+        prev.map((img) => (img.id === id ? { ...img, is_gallery: true } : img))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-8">
@@ -88,6 +111,21 @@ export default function GalleryPage() {
         </p>
         <Button asChild variant="outline">
           <Link href="/">Generate New Image</Link>
+        </Button>
+      </div>
+
+      <div className="flex justify-center gap-2 mb-6">
+        <Button
+          variant={view === 'gallery' ? 'default' : 'outline'}
+          onClick={() => setView('gallery')}
+        >
+          Gallery only
+        </Button>
+        <Button
+          variant={view === 'all' ? 'default' : 'outline'}
+          onClick={() => setView('all')}
+        >
+          All images
         </Button>
       </div>
 
@@ -109,7 +147,9 @@ export default function GalleryPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground mb-4">
-              No images in your gallery yet.
+              {view === 'gallery'
+                ? 'No images in your gallery yet.'
+                : 'No images saved yet.'}
             </p>
             <Button asChild>
               <Link href="/">Generate Your First Image</Link>
@@ -119,8 +159,9 @@ export default function GalleryPage() {
       ) : (
         <ImageGallery
           images={images}
-          onReorder={handleReorder}
+          onReorder={view === 'gallery' ? handleReorder : undefined}
           onDelete={handleDelete}
+          onAddToGallery={view === 'all' ? handleAddToGallery : undefined}
         />
       )}
     </div>

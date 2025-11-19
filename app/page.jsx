@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Trash } from 'lucide-react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
@@ -16,6 +16,7 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const isActionDisabled = isGenerating || !prompt.trim();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -51,7 +52,7 @@ export default function Home() {
     }
   };
 
-  const handleSave = async () => {
+  const saveImage = async (toGallery = false) => {
     if (!generatedImage) return;
 
     setIsSaving(true);
@@ -67,6 +68,7 @@ export default function Home() {
         body: JSON.stringify({
           image_url: generatedImage,
           prompt: prompt,
+          is_gallery: toGallery,
         }),
       });
 
@@ -76,7 +78,7 @@ export default function Home() {
         throw new Error(data.error || 'Failed to save image');
       }
 
-      setSuccessMessage('Image saved successfully!');
+      setSuccessMessage(toGallery ? 'Saved to gallery!' : 'Image saved.');
       setGeneratedImage(null);
       setPrompt('');
     } catch (err) {
@@ -86,6 +88,7 @@ export default function Home() {
     }
   };
 
+
   const handleDiscard = () => {
     setGeneratedImage(null);
     setSuccessMessage(null);
@@ -93,118 +96,139 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          Generate Your Image
-        </h2>
-        <p className="text-muted-foreground mb-4">
-          Describe what you want to see and let AI create it
-        </p>
-        <Button asChild variant="outline">
-          <Link href="/gallery">View Gallery</Link>
-        </Button>
-      </div>
+    <div className="max-w-3xl mx-auto space-y-8 md:space-y-10">
+      <h2 className="text-2xl font-semibold text-center">Generate</h2>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Prompt</CardTitle>
-          <CardDescription>
-            Enter a detailed description of the image you want to generate
-          </CardDescription>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3 md:pb-4">
+          <CardTitle className="text-lg">Prompt</CardTitle>
+          <CardDescription>Describe what you want.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g., A serene landscape with mountains and a lake at sunset"
+            placeholder="Type a prompt"
             rows={4}
             disabled={isGenerating}
           />
-          <Button
-            onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              'Generate Image'
-            )}
-          </Button>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              onClick={() => setPrompt('')}
+              variant="ghost"
+              className="w-full sm:w-auto"
+              disabled={isGenerating && !prompt}
+            >
+              Clear
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={isActionDisabled}
+              className="w-full sm:w-auto"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                'Generate'
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3 md:pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg">Preview</CardTitle>
+              <CardDescription>Result comes here. Save it or discard.</CardDescription>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/gallery">Gallery</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-      {successMessage && (
-        <Alert className="mb-6 border-green-500 text-green-700 dark:text-green-400">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
+          {successMessage && (
+            <Alert className="border-green-500 text-green-700 dark:text-green-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>{successMessage}</AlertDescription>
+            </Alert>
+          )}
 
-      {isGenerating && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">
-              Creating your image... This may take a minute.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          <div className="relative overflow-hidden rounded-lg border bg-muted/60 aspect-square flex items-center justify-center max-w-[320px] sm:max-w-[360px] mx-auto">
+            {isGenerating && (
+              <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="text-xs text-muted-foreground">Working...</p>
+                </div>
+              </div>
+            )}
 
-      {generatedImage && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="relative w-full aspect-square mb-6 rounded-lg overflow-hidden bg-muted">
+            {generatedImage ? (
               <Image
                 src={generatedImage}
                 alt="Generated image"
                 fill
                 className="object-contain"
                 priority
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 420px"
               />
-            </div>
-            <div className="flex gap-4">
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                size="lg"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Keep Image'
-                )}
-              </Button>
-              <Button
-                onClick={handleDiscard}
-                disabled={isSaving}
-                variant="secondary"
-                className="flex-1"
-                size="lg"
-              >
-                Discard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            ) : (
+              <div className="text-center space-y-1 px-6">
+                <p className="text-sm text-muted-foreground">
+                  Nothing yet. Generate an image to see it here.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => saveImage(false)}
+              disabled={isSaving || !generatedImage}
+              className="w-full sm:w-auto"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
+            </Button>
+            <Button
+              onClick={() => saveImage(true)}
+              disabled={isSaving || !generatedImage}
+              variant="secondary"
+              className="w-full sm:w-auto"
+            >
+              Save to gallery
+            </Button>
+            <Button
+              onClick={handleDiscard}
+              disabled={isSaving || !generatedImage}
+              variant="ghost"
+              className="w-full sm:w-auto"
+            >
+              Discard
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

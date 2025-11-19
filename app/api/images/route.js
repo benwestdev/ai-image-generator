@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const { data, error } = await supabase
-      .from('images')
-      .select('*')
-      .order('order_index', { ascending: true });
+    const { searchParams } = new URL(request.url);
+    const galleryOnly = searchParams.get('gallery') === 'true';
+
+    let query = supabase.from('images').select('*');
+
+    if (galleryOnly) {
+      query = query.eq('is_gallery', true);
+    }
+
+    const { data, error } = await query.order('order_index', { ascending: true });
 
     if (error) {
       throw error;
@@ -24,7 +30,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const { image_url, prompt } = await request.json();
+    const { image_url, prompt, is_gallery = false } = await request.json();
 
     if (!image_url || !prompt) {
       return NextResponse.json(
@@ -50,6 +56,7 @@ export async function POST(request) {
           image_url,
           prompt,
           order_index: nextOrderIndex,
+          is_gallery,
         },
       ])
       .select()
@@ -71,30 +78,46 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
-    const { images } = await request.json();
+    const { images, id, is_gallery } = await request.json();
 
-    if (!images || !Array.isArray(images)) {
-      return NextResponse.json(
-        { error: 'Images array is required' },
-        { status: 400 }
+    // Reorder case
+    if (Array.isArray(images)) {
+      const updates = images.map((img, index) =>
+        supabase
+          .from('images')
+          .update({ order_index: index })
+          .eq('id', img.id)
       );
+
+      await Promise.all(updates);
+
+      return NextResponse.json({ success: true });
     }
 
-    // Update order_index for each image
-    const updates = images.map((img, index) =>
-      supabase
+    // Toggle gallery flag
+    if (id && typeof is_gallery === 'boolean') {
+      const { data, error } = await supabase
         .from('images')
-        .update({ order_index: index })
-        .eq('id', img.id)
+        .update({ is_gallery })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return NextResponse.json({ success: true, image: data });
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid payload' },
+      { status: 400 }
     );
-
-    await Promise.all(updates);
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating image order:', error);
     return NextResponse.json(
-      { error: 'Failed to update image order' },
+      { error: 'Failed to update image' },
       { status: 500 }
     );
   }

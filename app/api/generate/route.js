@@ -18,18 +18,41 @@ export async function POST(request) {
 
     // Using SDXL model - you can replace this with your custom model
     const output = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      "benwestdev/test-jess-img:3a00387e871f62dbb58f7cd19cddc5656ac338b19d0926d8943105f05405f468",
       {
         input: {
+          model: "dev",
           prompt: prompt,
+          go_fast: false,
+          lora_scale: 1,
+          megapixels: "1",
           num_outputs: 1,
+          aspect_ratio: "1:1",
+          output_format: "webp",
+          guidance_scale: 3,
+          output_quality: 80,
+          prompt_strength: 0.8,
+          extra_lora_scale: 1,
+          num_inference_steps: 28,
+          disable_safety_checker: true
         }
       }
     );
 
-    return NextResponse.json({ 
-      success: true, 
-      image: Array.isArray(output) ? output[0] : output 
+    const firstResult = Array.isArray(output) ? output[0] : output;
+    const imageUrl =
+      typeof firstResult === 'string'
+        ? firstResult
+        : firstResult?.url?.() ?? firstResult?.url;
+
+    if (!imageUrl) {
+      throw new Error('No image URL returned from Replicate');
+    }
+
+    console.log({ imageUrl });
+    return NextResponse.json({
+      success: true,
+      image: imageUrl
     });
   } catch (error) {
     console.error('Error generating image:', error);
