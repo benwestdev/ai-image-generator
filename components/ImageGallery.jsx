@@ -9,7 +9,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -19,14 +18,11 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { SavedImage } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Trash2, GripVertical, Eye, EyeOff } from 'lucide-react';
 
-interface SortableImageProps {
-  image: SavedImage;
-  onDelete: (id: string) => void;
-}
-
-function SortableImage({ image, onDelete }: SortableImageProps) {
+function SortableImage({ image, onDelete }) {
   const [showPrompt, setShowPrompt] = useState(false);
   const {
     attributes,
@@ -44,14 +40,12 @@ function SortableImage({ image, onDelete }: SortableImageProps) {
   };
 
   return (
-    <div
+    <Card
       ref={setNodeRef}
       style={style}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden group cursor-move"
-      {...attributes}
-      {...listeners}
+      className="overflow-hidden group cursor-move hover:shadow-lg transition-shadow"
     >
-      <div className="relative aspect-square">
+      <div className="relative aspect-square bg-muted" {...attributes} {...listeners}>
         <Image
           src={image.image_url}
           alt={image.prompt}
@@ -59,49 +53,59 @@ function SortableImage({ image, onDelete }: SortableImageProps) {
           className="object-cover"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
-          <button
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical className="h-6 w-6 text-white drop-shadow-lg" />
+        </div>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               onDelete(image.id);
             }}
-            className="opacity-0 group-hover:opacity-100 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all"
+            variant="destructive"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 transition-all"
           >
+            <Trash2 className="h-4 w-4 mr-2" />
             Delete
-          </button>
+          </Button>
         </div>
       </div>
-      <div className="p-4">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowPrompt(!showPrompt);
-          }}
-          className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
-        >
-          {showPrompt ? 'Hide' : 'Show'} Prompt
-        </button>
-        {showPrompt && (
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
-            {image.prompt}
-          </p>
-        )}
-      </div>
-    </div>
+      <CardFooter className="p-4">
+        <div className="w-full">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowPrompt(!showPrompt);
+            }}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start px-0"
+          >
+            {showPrompt ? (
+              <>
+                <EyeOff className="h-4 w-4 mr-2" />
+                Hide Prompt
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                Show Prompt
+              </>
+            )}
+          </Button>
+          {showPrompt && (
+            <p className="mt-2 text-sm text-muted-foreground line-clamp-3">
+              {image.prompt}
+            </p>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
   );
 }
 
-interface ImageGalleryProps {
-  images: SavedImage[];
-  onReorder: (images: SavedImage[]) => void;
-  onDelete: (id: string) => void;
-}
-
-export default function ImageGallery({
-  images,
-  onReorder,
-  onDelete,
-}: ImageGalleryProps) {
+export default function ImageGallery({ images, onReorder, onDelete }) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -113,7 +117,7 @@ export default function ImageGallery({
     })
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = (event) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
