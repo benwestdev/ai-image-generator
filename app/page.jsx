@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle2, AlertCircle, Trash } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
@@ -80,7 +80,6 @@ export default function Home() {
 
       setSuccessMessage(toGallery ? 'Saved to gallery!' : 'Image saved.');
       setGeneratedImage(null);
-      setPrompt('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -114,14 +113,6 @@ export default function Home() {
           />
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              onClick={() => setPrompt('')}
-              variant="ghost"
-              className="w-full sm:w-auto"
-              disabled={isGenerating && !prompt}
-            >
-              Clear
-            </Button>
             <Button
               onClick={handleGenerate}
               disabled={isActionDisabled}

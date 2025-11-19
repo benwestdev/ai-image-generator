@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Buffer } from 'node:buffer';
 import Replicate from 'replicate';
 
 const replicate = new Replicate({
@@ -49,10 +50,21 @@ export async function POST(request) {
       throw new Error('No image URL returned from Replicate');
     }
 
-    console.log({ imageUrl });
+    // Fetch the image and inline it as a data URL so it doesn't expire
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) {
+      throw new Error(`Failed to fetch image from Replicate: ${imgRes.status}`);
+    }
+
+    const contentType = imgRes.headers.get('content-type') || 'image/png';
+    const arrayBuffer = await imgRes.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const dataUrl = `data:${contentType};base64,${base64}`;
+
+    console.log({ imageUrl, dataUrlLength: dataUrl.length });
     return NextResponse.json({
       success: true,
-      image: imageUrl
+      image: dataUrl
     });
   } catch (error) {
     console.error('Error generating image:', error);
