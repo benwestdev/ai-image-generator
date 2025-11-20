@@ -100,6 +100,30 @@ export default function GalleryPage() {
     }
   };
 
+  const handleToggleGallery = async (id, isGallery) => {
+    try {
+      const response = await fetch('/api/images', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, is_gallery: isGallery }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update gallery status');
+      }
+
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, is_gallery: isGallery } : img
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-8">
@@ -161,7 +185,7 @@ export default function GalleryPage() {
           images={images}
           onReorder={view === 'gallery' ? handleReorder : undefined}
           onDelete={handleDelete}
-          onAddToGallery={view === 'all' ? handleAddToGallery : undefined}
+          onToggleGallery={handleToggleGallery}
         />
       )}
     </div>
