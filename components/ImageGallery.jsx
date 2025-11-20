@@ -20,9 +20,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
-import { Trash2, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Trash2, GripVertical, Eye, EyeOff, Download } from 'lucide-react';
 
-function SortableImage({ image, onDelete, onAddToGallery, enableDrag }) {
+function SortableImage({ image, onDelete, onToggleGallery, enableDrag }) {
   const [showPrompt, setShowPrompt] = useState(false);
   const {
     attributes,
@@ -61,18 +61,35 @@ function SortableImage({ image, onDelete, onAddToGallery, enableDrag }) {
             <GripVertical className="h-6 w-6 text-white drop-shadow-lg" />
           </div>
         )}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
-          <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all">
-            {onAddToGallery && !image.is_gallery && (
+      </div>
+      <CardFooter className="p-4">
+        <div className="w-full space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = document.createElement('a');
+                const isWebp = image.image_url?.startsWith('data:image/webp');
+                link.href = image.image_url;
+                link.download = isWebp ? 'image.webp' : 'image.png';
+                link.click();
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+            {onToggleGallery && (
               <Button
+                variant="secondary"
+                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAddToGallery(image.id);
+                  onToggleGallery(image.id, !image.is_gallery);
                 }}
-                size="sm"
-                className="bg-white text-black hover:bg-white/90"
               >
-                Add to gallery
+                {image.is_gallery ? 'Remove from gallery' : 'Add to gallery'}
               </Button>
             )}
             <Button
@@ -87,10 +104,6 @@ function SortableImage({ image, onDelete, onAddToGallery, enableDrag }) {
               Delete
             </Button>
           </div>
-        </div>
-      </div>
-      <CardFooter className="p-4">
-        <div className="w-full">
           <Button
             onClick={(e) => {
               e.stopPropagation();
@@ -123,7 +136,7 @@ function SortableImage({ image, onDelete, onAddToGallery, enableDrag }) {
   );
 }
 
-export default function ImageGallery({ images, onReorder, onDelete, onAddToGallery }) {
+export default function ImageGallery({ images, onReorder, onDelete, onToggleGallery }) {
   const enableDrag = Boolean(onReorder);
 
   const sensors = enableDrag
@@ -161,7 +174,7 @@ export default function ImageGallery({ images, onReorder, onDelete, onAddToGalle
             key={image.id}
             image={image}
             onDelete={onDelete}
-            onAddToGallery={onAddToGallery}
+            onToggleGallery={onToggleGallery}
             enableDrag={false}
           />
         ))}
@@ -182,7 +195,7 @@ export default function ImageGallery({ images, onReorder, onDelete, onAddToGalle
               key={image.id}
               image={image}
               onDelete={onDelete}
-              onAddToGallery={onAddToGallery}
+              onToggleGallery={onToggleGallery}
               enableDrag
             />
           ))}
