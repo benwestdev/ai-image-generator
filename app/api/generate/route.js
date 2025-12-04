@@ -8,7 +8,7 @@ const replicate = new Replicate({
 
 export async function POST(request) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, modelId } = await request.json();
 
     if (!prompt) {
       return NextResponse.json(
@@ -17,9 +17,10 @@ export async function POST(request) {
       );
     }
 
-    // Using SDXL model - you can replace this with your custom model
+    console.log(`Generating with model: ${modelId}`);
+
     const output = await replicate.run(
-      "benwestdev/test-jess-img:3a00387e871f62dbb58f7cd19cddc5656ac338b19d0926d8943105f05405f468",
+      modelId,
       {
         input: {
           model: "dev",

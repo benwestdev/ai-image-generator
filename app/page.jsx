@@ -7,11 +7,29 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Loader2, CheckCircle2, AlertCircle, Copy, Check } from 'lucide-react';
+
+const SUGGESTED_MODELS = [
+  {
+    name: 'Custom SDXL (Default)',
+    id: 'benwestdev/test-jess-img:3a00387e871f62dbb58f7cd19cddc5656ac338b19d0926d8943105f05405f468'
+  },
+  {
+    name: 'Flux Schnell',
+    id: 'black-forest-labs/flux-schnell'
+  },
+  {
+    name: 'Stable Diffusion 3',
+    id: 'stability-ai/stable-diffusion-3'
+  }
+];
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
+  const [selectedModel, setSelectedModel] = useState('benwestdev/test-jess-img:3a00387e871f62dbb58f7cd19cddc5656ac338b19d0926d8943105f05405f468');
   const [generatedImage, setGeneratedImage] = useState(null);
+  const [copiedModelId, setCopiedModelId] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -35,7 +53,10 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          modelId: selectedModel
+        }),
       });
 
       const data = await response.json();
@@ -94,6 +115,16 @@ export default function Home() {
     setError(null);
   };
 
+  const copyToClipboard = async (text, id) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedModelId(id);
+      setTimeout(() => setCopiedModelId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-8 md:space-y-10">
       <h2 className="text-2xl font-semibold text-center">Generate</h2>
@@ -111,6 +142,47 @@ export default function Home() {
             rows={4}
             disabled={isGenerating}
           />
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Model String
+            </label>
+            <Input
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              placeholder="Enter model string (e.g. owner/name:version)"
+              disabled={isGenerating}
+            />
+
+            <div className="pt-2 space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Suggested Models:</p>
+              <div className="grid gap-2">
+                {SUGGESTED_MODELS.map((model) => (
+                  <div key={model.id} className="flex items-center justify-between p-2 rounded-md border bg-muted/50 text-xs">
+                    <div className="flex flex-col gap-0.5 overflow-hidden">
+                      <span className="font-medium">{model.name}</span>
+                      <span className="text-muted-foreground truncate font-mono" title={model.id}>
+                        {model.id}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 ml-2"
+                      onClick={() => copyToClipboard(model.id, model.id)}
+                      title="Copy model string"
+                    >
+                      {copiedModelId === model.id ? (
+                        <Check className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
