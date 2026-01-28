@@ -21,7 +21,11 @@ export default function GalleryPage() {
   const fetchImages = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/images${view === 'gallery' ? '?gallery=true' : ''}`);
+      const params = new URLSearchParams();
+      if (view === 'gallery') params.set('gallery', 'true');
+      if (view === 'favorites') params.set('favorite', 'true');
+      const queryString = params.toString();
+      const response = await fetch(`/api/images${queryString ? `?${queryString}` : ''}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -33,28 +37,6 @@ export default function GalleryPage() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleReorder = async (newImages) => {
-    setImages(newImages);
-
-    try {
-      const response = await fetch('/api/images', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ images: newImages }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update order');
-      }
-    } catch (err) {
-      console.error('Error updating order:', err);
-      // Revert on error
-      fetchImages();
     }
   };
 
@@ -73,28 +55,6 @@ export default function GalleryPage() {
       }
 
       setImages(images.filter((img) => img.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    }
-  };
-
-  const handleAddToGallery = async (id) => {
-    try {
-      const response = await fetch('/api/images', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, is_gallery: true }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add to gallery');
-      }
-
-      setImages((prev) =>
-        prev.map((img) => (img.id === id ? { ...img, is_gallery: true } : img))
-      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -124,15 +84,36 @@ export default function GalleryPage() {
     }
   };
 
+  const handleToggleFavorite = async (id, isFavorite) => {
+    try {
+      const response = await fetch('/api/images', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, is_favorite: isFavorite }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update favorite status');
+      }
+
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, is_favorite: isFavorite } : img
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
           Your Gallery
         </h2>
-        <p className="text-muted-foreground mb-4">
-          Drag and drop to reorder your images
-        </p>
         <Button asChild variant="outline">
           <Link href="/">Generate New Image</Link>
         </Button>
@@ -150,6 +131,12 @@ export default function GalleryPage() {
           onClick={() => setView('all')}
         >
           All images
+        </Button>
+        <Button
+          variant={view === 'favorites' ? 'default' : 'outline'}
+          onClick={() => setView('favorites')}
+        >
+          Favorites
         </Button>
       </div>
 
@@ -173,7 +160,9 @@ export default function GalleryPage() {
             <p className="text-muted-foreground mb-4">
               {view === 'gallery'
                 ? 'No images in your gallery yet.'
-                : 'No images saved yet.'}
+                : view === 'favorites'
+                  ? 'No favorites yet.'
+                  : 'No images saved yet.'}
             </p>
             <Button asChild>
               <Link href="/">Generate Your First Image</Link>
@@ -183,9 +172,9 @@ export default function GalleryPage() {
       ) : (
         <ImageGallery
           images={images}
-          onReorder={view === 'gallery' ? handleReorder : undefined}
           onDelete={handleDelete}
           onToggleGallery={handleToggleGallery}
+          onToggleFavorite={handleToggleFavorite}
         />
       )}
     </div>

@@ -20,9 +20,15 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
-import { Trash2, GripVertical, Eye, EyeOff, Download } from 'lucide-react';
+import { Trash2, GripVertical, Eye, EyeOff, Download, Star } from 'lucide-react';
 
-function SortableImage({ image, onDelete, onToggleGallery, enableDrag }) {
+function SortableImage({
+  image,
+  onDelete,
+  onToggleGallery,
+  onToggleFavorite,
+  enableDrag,
+}) {
   const [showPrompt, setShowPrompt] = useState(false);
   const {
     attributes,
@@ -92,6 +98,23 @@ function SortableImage({ image, onDelete, onToggleGallery, enableDrag }) {
                 {image.is_gallery ? 'Remove from gallery' : 'Add to gallery'}
               </Button>
             )}
+            {onToggleFavorite && (
+              <Button
+                variant={image.is_favorite ? 'default' : 'outline'}
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(image.id, !image.is_favorite);
+                }}
+              >
+                <Star
+                  className={`h-4 w-4 mr-2 ${
+                    image.is_favorite ? 'fill-white' : ''
+                  }`}
+                />
+                {image.is_favorite ? 'Favorited' : 'Favorite'}
+              </Button>
+            )}
             <Button
               onClick={(e) => {
                 e.stopPropagation();
@@ -136,7 +159,13 @@ function SortableImage({ image, onDelete, onToggleGallery, enableDrag }) {
   );
 }
 
-export default function ImageGallery({ images, onReorder, onDelete, onToggleGallery }) {
+export default function ImageGallery({
+  images,
+  onReorder,
+  onDelete,
+  onToggleGallery,
+  onToggleFavorite,
+}) {
   const enableDrag = Boolean(onReorder);
 
   const sensors = enableDrag
@@ -175,6 +204,7 @@ export default function ImageGallery({ images, onReorder, onDelete, onToggleGall
             image={image}
             onDelete={onDelete}
             onToggleGallery={onToggleGallery}
+            onToggleFavorite={onToggleFavorite}
             enableDrag={false}
           />
         ))}
@@ -193,14 +223,15 @@ export default function ImageGallery({ images, onReorder, onDelete, onToggleGall
           {images.map((image) => (
             <SortableImage
               key={image.id}
-              image={image}
-              onDelete={onDelete}
-              onToggleGallery={onToggleGallery}
-              enableDrag
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+            image={image}
+            onDelete={onDelete}
+            onToggleGallery={onToggleGallery}
+            onToggleFavorite={onToggleFavorite}
+            enableDrag
+          />
+        ))}
+      </div>
+    </SortableContext>
+  </DndContext>
   );
 }

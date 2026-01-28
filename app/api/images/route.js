@@ -5,14 +5,18 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const galleryOnly = searchParams.get('gallery') === 'true';
+    const favoriteOnly = searchParams.get('favorite') === 'true';
 
     let query = supabase.from('images').select('*');
 
     if (galleryOnly) {
       query = query.eq('is_gallery', true);
     }
+    if (favoriteOnly) {
+      query = query.eq('is_favorite', true);
+    }
 
-    const { data, error } = await query.order('order_index', { ascending: true });
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       throw error;
@@ -30,7 +34,8 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { image_url, prompt, is_gallery = false } = await request.json();
+    const { image_url, prompt, is_gallery = false, is_favorite = false } =
+      await request.json();
 
     if (!image_url || !prompt) {
       return NextResponse.json(
@@ -57,6 +62,7 @@ export async function POST(request) {
           prompt,
           order_index: nextOrderIndex,
           is_gallery,
+          is_favorite,
         },
       ])
       .select()
@@ -78,7 +84,7 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
-    const { images, id, is_gallery } = await request.json();
+    const { images, id, is_gallery, is_favorite } = await request.json();
 
     // Reorder case
     if (Array.isArray(images)) {
@@ -95,10 +101,17 @@ export async function PATCH(request) {
     }
 
     // Toggle gallery flag
-    if (id && typeof is_gallery === 'boolean') {
+    if (
+      id &&
+      (typeof is_gallery === 'boolean' || typeof is_favorite === 'boolean')
+    ) {
+      const update = {};
+      if (typeof is_gallery === 'boolean') update.is_gallery = is_gallery;
+      if (typeof is_favorite === 'boolean') update.is_favorite = is_favorite;
+
       const { data, error } = await supabase
         .from('images')
-        .update({ is_gallery })
+        .update(update)
         .eq('id', id)
         .select()
         .single();

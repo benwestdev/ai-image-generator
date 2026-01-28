@@ -8,12 +8,14 @@ CREATE TABLE IF NOT EXISTS images (
   prompt TEXT NOT NULL,
   order_index INTEGER NOT NULL DEFAULT 0,
   is_gallery BOOLEAN NOT NULL DEFAULT FALSE,
+  is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create an index on order_index for better query performance
 CREATE INDEX IF NOT EXISTS idx_images_order ON images(order_index);
 CREATE INDEX IF NOT EXISTS idx_images_gallery ON images(is_gallery);
+CREATE INDEX IF NOT EXISTS idx_images_favorite ON images(is_favorite);
 
 -- Enable Row Level Security
 ALTER TABLE images ENABLE ROW LEVEL SECURITY;
