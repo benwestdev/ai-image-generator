@@ -6,6 +6,12 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const galleryOnly = searchParams.get('gallery') === 'true';
     const favoriteOnly = searchParams.get('favorite') === 'true';
+    const rawLimit = parseInt(searchParams.get('limit') || '0', 10);
+    const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+    const hasPagination =
+      Number.isFinite(rawLimit) && rawLimit > 0 && Number.isFinite(rawOffset) && rawOffset >= 0;
+    const limit = hasPagination ? rawLimit : null;
+    const offset = hasPagination ? rawOffset : 0;
 
     let query = supabase.from('images').select('*');
 
@@ -16,13 +22,27 @@ export async function GET(request) {
       query = query.eq('is_favorite', true);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    query = query.order('created_at', { ascending: false });
+
+    if (hasPagination) {
+      // Supabase range is inclusive, so request one extra row to detect hasMore.
+      query = query.range(offset, offset + limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;
     }
 
-    return NextResponse.json({ images: data });
+    if (!hasPagination) {
+      return NextResponse.json({ images: data });
+    }
+
+    const images = Array.isArray(data) ? data.slice(0, limit) : [];
+    const hasMore = Array.isArray(data) ? data.length > limit : false;
+
+    return NextResponse.json({ images, hasMore });
   } catch (error) {
     console.error('Error fetching images:', error);
     return NextResponse.json(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -8,22 +8,35 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, AlertCircle } from 'lucide-react';
 import ImageGallery from '@/components/ImageGallery';
 
+const PAGE_SIZE = 10;
+
 export default function GalleryPage() {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [view, setView] = useState('gallery');
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const observerRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
-  useEffect(() => {
-    fetchImages();
-  }, [view]);
-
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async ({ reset = false, nextOffset = 0 } = {}) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
-      setIsLoading(true);
+      setError(null);
+      if (reset) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
       const params = new URLSearchParams();
       if (view === 'gallery') params.set('gallery', 'true');
       if (view === 'favorites') params.set('favorite', 'true');
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(nextOffset));
       const queryString = params.toString();
       const response = await fetch(`/api/images${queryString ? `?${queryString}` : ''}`);
       const data = await response.json();
@@ -32,13 +45,51 @@ export default function GalleryPage() {
         throw new Error(data.error || 'Failed to fetch images');
       }
 
-      setImages(data.images || []);
+      const nextImages = Array.isArray(data.images) ? data.images : [];
+
+      setImages((prev) => (reset ? nextImages : [...prev, ...nextImages]));
+      setOffset(nextOffset + nextImages.length);
+      setHasMore(Boolean(data.hasMore));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setIsLoading(false);
+      if (reset) {
+        setIsLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
+      isFetchingRef.current = false;
     }
-  };
+  }, [view]);
+
+  useEffect(() => {
+    setImages([]);
+    setOffset(0);
+    setHasMore(false);
+    fetchImages({ reset: true, nextOffset: 0 });
+  }, [view, fetchImages]);
+
+  const loadMoreRef = useCallback(
+    (node) => {
+      if (isLoading || isLoadingMore || !hasMore) return;
+      if (observerRef.current) observerRef.current.disconnect();
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchImages({ nextOffset: offset });
+        }
+      });
+
+      if (node) observerRef.current.observe(node);
+    },
+    [fetchImages, hasMore, isLoading, isLoadingMore, offset]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (observerRef.current) observerRef.current.disconnect();
+    };
+  }, []);
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this image?')) {
@@ -54,7 +105,8 @@ export default function GalleryPage() {
         throw new Error('Failed to delete image');
       }
 
-      setImages(images.filter((img) => img.id !== id));
+      setImages((prev) => prev.filter((img) => img.id !== id));
+      setOffset((prev) => Math.max(prev - 1, 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -170,12 +222,24 @@ export default function GalleryPage() {
           </CardContent>
         </Card>
       ) : (
-        <ImageGallery
-          images={images}
-          onDelete={handleDelete}
-          onToggleGallery={handleToggleGallery}
-          onToggleFavorite={handleToggleFavorite}
-        />
+        <div>
+          <ImageGallery
+            images={images}
+            onDelete={handleDelete}
+            onToggleGallery={handleToggleGallery}
+            onToggleFavorite={handleToggleFavorite}
+          />
+
+          {isLoadingMore && (
+            <div className="py-6 text-center">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+            </div>
+          )}
+
+          {hasMore && !isLoadingMore && (
+            <div ref={loadMoreRef} className="h-1" aria-hidden="true" />
+          )}
+        </div>
       )}
     </div>
   );
